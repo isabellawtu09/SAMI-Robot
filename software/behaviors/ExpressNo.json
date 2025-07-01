@@ -1,0 +1,69 @@
+{
+    "Name": "ExpressNo",
+    "Keyframes": [
+        {
+            "HasJoints": "True",
+            "Expression": "Angry",
+            "WaitTime": 1000,
+            "JointMoveTime": 10,
+            "JointAngles": [
+                {
+                    "Joint": "HeadTurn",
+                    "Angle": 120
+                }
+            ]
+        }, {
+            "HasJoints": "True",
+            "WaitTime": 500,
+            "JointMoveTime": 10,
+            "JointAngles": [
+                {
+                    "Joint": "HeadTurn",
+                    "Angle": 70
+                }
+            ]
+        },{
+            "HasJoints": "True",
+            "WaitTime": 500,
+            "JointMoveTime": 10,
+            "JointAngles": [
+                {
+                    "Joint": "HeadTurn",
+                    "Angle": 160
+                }
+            ]
+        },
+        {
+            "HasJoints": "True",
+            "WaitTime": 500,
+            "JointMoveTime": 10,
+            "JointAngles": [
+                {
+                    "Joint": "HeadTurn",
+                    "Angle": 70
+                }
+            ]
+        },{
+            "HasJoints": "True",
+            "WaitTime": 500,
+            "JointMoveTime": 10,
+            "JointAngles": [
+                {
+                    "Joint": "HeadTurn",
+                    "Angle": 160
+                }
+            ]
+        },
+        {
+            "HasJoints": "True",
+            "WaitTime": 1000,
+            "JointMoveTime": 10,
+            "JointAngles": [
+                {
+                    "Joint": "HeadTurn",
+                    "Angle": 120
+                }
+            ]
+        }
+    ]
+}
