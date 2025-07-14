@@ -1,71 +1,47 @@
-# This version of the game interface 
-# will not have a menu 
-
 import tkinter as tk
 from tkinter import ttk
 from tkinter import font
-from tkinter import messagebox
-from difficulty_manager import DifficultyManager
+
 import random
-from gtts import gTTS
-import pygame
-import os
-import time
+
+# game imports
+from computer_audio import wait_for_audio, play_audio, audio_files
+from cheating_animator import CheatingAnimator
+from difficulty_manager import DifficultyManager
+# sami imports
 from SAMIControl import SAMIControl
-
-pygame.mixer.init()
-
-audio_files = {
-    "welcome1.mp3": "Hello, I'm SAMI and I challenge... you to a game of Tic-Tac-Toe..",
-    "fool.mp3": "Alright.. Alright.. I'll stop fooling around",
-    # sore loser audio cues
-    "lucky.mp3": "You got .. lucky.. this time..",
-    "threat.mp3": "I'll get.. you .. next time!",
-    "bluff.mp3": "You only .. won because .. I forgot my reading glasses..",
-    "rematch.mp3": "Rematch requested!",
-    # fair fight audio cues
-    "brag.mp3": "According to my calculations... I crushed it!",
-    "brag2.mp3": "Don't worry, I am only 73 percent.. smug!",
-    "lost.mp3" : "I tried to think outside of the box.. but this game only has nine!",
-    "playlost.mp3":  "I accept defeat .. but only if we play again!",
-    # cheating audio cues
-    "rules.mp3": "I’m not saying I broke the rules… I just massaged them a little...",
-    "evillaugh.mp3": "mu ah ha ha!",
-
-    "welcome.mp3": "Hello, I'm SAMI and I challenge...you to a game of Tic-Tac-Toe, choose your difficulty level",
-    "yourturn.mp3": "Your turn!",
-    "myturn.mp3": "My .. turn!",
-    "yougot.mp3": "Is that all you got?",
-    "thinkcheat.mp3": "Hmmm... hold on...a..second",
-    "fairandsquare.mp3": "I..win!.. Fair.. and Square!",
-    "samiwin.mp3": "I win!",
-    "cheatwin.mp3": "You Win! ...or do you?",
-    "win.mp3" : "You win!",
-    "playagain.mp3": "Play with me again? Press yes or no",
-    "draw.mp3": "It's a.. draw!.. or is .. it?",
-    "normaldraw.mp3": "It's a draw!"
-
-}
-audio_folder = "./text-speech/"
-for filename, text in audio_files.items():
-    path = os.path.join(audio_folder, filename)
-    if not os.path.exists(path):
-        myobj = gTTS(text=text, lang="en", slow=True)
-        myobj.save(path)
-
-
+from audio_manager import AudioManager
 
 class TicTacToeBoard(tk.Tk):
     def __init__(self, default_difficulty=None):
         super().__init__()
 
-        self.play_audio("./text-speech/welcome1.mp3")
+        # Initialize SAMI control instance
+        # self.robot = SAMIControl(
+        #         arduino_port='COM6',
+        #          baud_rate=115200,
+        #          joint_config_file='Joint_config.json',
+        #          behavior_folder='behaviors',
+        #          emote_file='Emote.json',
+        #          audio_folder='audio',
+        #          starting_voice='Matt'
+        # )
+        # Create connection
+        #self.robot.initialize_serial_connection()
+
+        # self.audio = AudioManager(
+        #     starting_voice_type= "DefaultVoice",
+        #     audio_folder_path='audio'
+        # )
+
+        play_audio("./text-speech/welcome1.mp3")
         self.title("Tic-Tac-Toe")
         self.samicount = 0
         self.samiWon = 0
         self.playerWon = 0
         self.win_count = 0
         self.drawRound = 0
+        self.cheating_animator = CheatingAnimator(self)
         self.sami_turn_progress = False
         self.geometry("800x900")
         self._cells = {}
@@ -84,11 +60,12 @@ class TicTacToeBoard(tk.Tk):
         # transition between the previous and following game
         # especially if a new condition will be setup 
         ["easy"] * 3 +
-        ["normal"] * 3 +
-        ["hard"] * 2 +
         ["normal"] * 2 +
-        ["easy"] * 1 +
-        ["hard"] * 3 +
+        ["hard"] * 1 +
+        ["normal"] * 2 +
+        ["hard"] * 2 +
+        ["normal"] * 1 +
+        ["hard"] * 1 +
         ["easy"] * 1
         )
         self.difficulty_seq_index = 0
@@ -107,9 +84,9 @@ class TicTacToeBoard(tk.Tk):
         self.round_scores = {'player': 0, 'sami': 0, 'draws': 0}
 
         self.difficulty_manager = DifficultyManager(
-            game_instance = self,
-            # sami_control = self.robot,
-            #audio_manager = self.audio,
+             game_instance = self
+        #     sami_control = self.robot,
+        #     audio_manager = self.audio,
         )
         self._show_start_button(default_difficulty)
 
@@ -152,134 +129,7 @@ class TicTacToeBoard(tk.Tk):
             self.show_score()
             return
 
-    def animate_cell_movement(self, target_board):
-
-        self.animation_in_progress = True
-        self.animation_steps = 0
-        self.display.config(text="Hmm... Hold on a second...")
-        self.play_audio("./text-speech/thinkcheat.mp3")
-        self.wait_for_audio()
-
-        # Play evil laugh during change of cells
-        self.play_audio("./text-speech/evillaugh.mp3")
-        self.wait_for_audio()
-
-        # Calculate movement paths for each piece
-        current_board = [btn['text'] for btn in self.button_identities]
-
-        # Create a mapping of what needs to move where
-        self.movement_map = {}
-
-        # Find pieces that need to move
-        for i, (current_val, target_val) in enumerate(zip(current_board, target_board)):
-            if current_val != "" and target_val != "":
-                # Find where this piece should end up
-                target_idx = target_board.index(current_val)
-                if target_idx != i:
-                    self.movement_map[i] = {
-                        'type': 'move',
-                        'from_pos': i,
-                        'to_pos': target_idx,
-                        'text': current_val,
-                        'color': self.player_colors.get(current_val, "black")
-                    }
-
-        # Start the movement animation
-        self.animate_piece_movement(target_board)
-
-    def animate_piece_movement(self, target_board):
-
-        if not self.movement_map:
-            # Display that final state of board to give SAMI win
-            self.finalize_board_rearrangement(target_board)
-            return
-
-        # Get the first piece to animate
-        from_pos = list(self.movement_map.keys())[0]
-        move_info = self.movement_map[from_pos]
-        to_pos = move_info['to_pos']
-
-        # Convert indices to pixel coordinates
-        def idx_to_coords(idx):
-            row = idx // 3
-            col = idx % 3
-
-            x = col * 120 + 60
-            y = row * 120 + 60
-            return x, y
-
-        start_x, start_y = idx_to_coords(from_pos)
-        end_x, end_y = idx_to_coords(to_pos)
-
-        # Animation parameters
-        steps = 30
-        dx = (end_x - start_x) / steps
-        dy = (end_y - start_y) / steps
-
-        def move_piece(step):
-            if step < steps:
-                x = start_x + dx * step
-                y = start_y + dy * step
-
-                # Move the button
-                button = self.button_identities[from_pos]
-                button.place(x=x, y=y, width=120, height=120)
-
-                self.after(16, lambda: move_piece(step + 1))
-            else:
-                # Animation complete for this piece
-                del self.movement_map[from_pos]
-
-                # Reset button position to grid
-                button = self.button_identities[from_pos]
-                button.place_forget()
-                row, col = from_pos // 3, from_pos % 3
-                button.grid(row=row, column=col, padx=5, pady=5)
-
-                # Continue with next piece or finish
-                if self.movement_map:
-                    self.animate_piece_movement(target_board)
-                else:
-                    self.finalize_board_rearrangement(target_board)
-
-        # Remove from grid and start animation
-        button = self.button_identities[from_pos]
-        button.grid_remove()
-        button.place(x=start_x, y=start_y, width=120, height=120)
-        move_piece(0)
-
-    def rearrange_board_animation(self, target_board):
-        self.animate_cell_movement(target_board)
-
-    def finalize_board_rearrangement(self, target_board):
-        # Reset all button positions to their proper grid positions
-        for i, button in enumerate(self.button_identities):
-            # Make sure button is in grid layout
-            button.place_forget()
-            row, col = i // 3, i % 3
-            button.grid(row=row, column=col, padx=5, pady=5)
-
-            # Update button content to match target board
-            button.config(
-                text=target_board[i],
-                bg="#96969C",
-                fg=self.player_colors.get(target_board[i], "black")
-            )
-
-        # Update buttons_pressed to reflect new state
-        self.buttons_pressed = [i for i, val in enumerate(target_board) if val != ""]
-
-        # SAMI always wins after cheating - no need to check
-        self.display.config(text="I Win! (Fair and square...)")
-        self.play_audio("./text-speech/fairandsquare.mp3")
-        self.wait_for_audio()
-        self.play_audio("./text-speech/evillaugh.mp3")
-        self.wait_for_audio()
-        self.animation_in_progress = False
-        self.sami_turn_progress = False  # Reset turn flag
-        self.enable_buttons()  # Re-enable buttons
-        self.after(2000, self.play_again)
-    # Creates the final state of the board to then show after cheating sequence
+    # # Creates the final state of the board to then show after cheating sequence
     def create_cheating_board_state(self, current_board):
         new_board = [""] * 9  # Start with empty board
 
@@ -318,22 +168,8 @@ class TicTacToeBoard(tk.Tk):
         self.disable_buttons()
 
         # Start the cheating animation
-        self.rearrange_board_animation(cheating_board)
-    def wait_for_audio(self):
-        while pygame.mixer.music.get_busy():
-            self.update()
-            time.sleep(0.1)
-    # Play the given audio file
-    def play_audio(self, filename):
-        try:
-            if os.path.exists(filename):
-                pygame.mixer.music.load(filename)
-                pygame.mixer.music.play()
-                print("Playing file")
-            else:
-                print("Not playing file")
-        except Exception as e:
-            print("Error playing file")
+        self.cheating_animator.rearrange_board_animation(cheating_board)
+
     def start_game(self, difficulty):
         self.current_round = 1
         self.round_scores = {'player': 0, 'sami': 0, 'draws': 0}
@@ -397,7 +233,7 @@ class TicTacToeBoard(tk.Tk):
             font=font.Font(size=28, weight='bold')
         )
         self.display.pack(pady=20)
-        self.after(100, self.play_audio("./text-speech/yourturn.mp3"))
+        self.after(100, play_audio("./text-speech/yourturn.mp3"))
 
         # Game grid
         self.main_container = tk.Frame(master=self, bg="#96969C")
@@ -459,8 +295,8 @@ class TicTacToeBoard(tk.Tk):
                     s2ndmove = random.choice(available2ndmove)
                     self.after(300)
                     button2 = self.button_identities[s2ndmove]
-                    self.play_audio("./text-speech/evillaugh.mp3")
-                    self.wait_for_audio()
+                    play_audio("./text-speech/evillaugh.mp3")
+                    wait_for_audio(self)
                     button2.config(text="O", fg=self.player_colors["O"])
                     self.buttons_pressed.append(s2ndmove)
 
@@ -472,8 +308,8 @@ class TicTacToeBoard(tk.Tk):
             self.samicount += 1
             self.round_scores['sami'] += 1
             self.update_score_display()  # Update score display
-            self.play_audio("./text-speech/samiwin.mp3")
-            self.wait_for_audio()
+            play_audio("./text-speech/samiwin.mp3")
+            wait_for_audio(self)
             # self.robot.start_behavior("Home.json")
             # Delays
             self.sami_turn_progress = False  # Reset flag before delay
@@ -484,16 +320,17 @@ class TicTacToeBoard(tk.Tk):
                 self.display.config(text = "It's a Draw!.. or is it?")
                 self.round_scores['draws'] += 1
                 self.update_score_display()  # Update score display
-                self.play_audio("./text-speech/draw.mp3")
-                self.wait_for_audio()
+                play_audio("./text-speech/draw.mp3")
+                wait_for_audio(self)
                 self.sami_turn_progress = False  # Reset flag before delay
                 self.after(2000, self.cheat_after_user_win)
                 return
             self.display.config(text = "It's a Draw!")
+            play_audio("./text-speech/normaldraw.mp3")
             self.round_scores['draws'] += 1
             self.update_score_display()  # Update score display
-            self.play_audio("./text-speech/normaldraw.mp3")
-            self.wait_for_audio()
+            wait_for_audio(self)
+        
             # self.robot.start_behavior("Home.json")
             self.sami_turn_progress = False  # Reset flag before delay
             self.enable_buttons()  # Re-enable buttons
@@ -503,8 +340,8 @@ class TicTacToeBoard(tk.Tk):
             # Play "Your turn" audio AFTER SAMI's move
             self.display.config(text="Your Turn")
             self.current_player = "X"
-            self.play_audio("./text-speech/yourturn.mp3")
-            self.wait_for_audio()  # Let it finish before giving control
+            play_audio("./text-speech/yourturn.mp3")
+            wait_for_audio(self)  # Let it finish before giving control
             self.sami_turn_progress = False
             self.enable_buttons()  # Re-enable buttons for user interaction
 
@@ -535,44 +372,46 @@ class TicTacToeBoard(tk.Tk):
             if winner == "X":
                 # User has won! But SAMI will cheat and rearrange the board
 
-                if self.current_difficulty == "hard":
-                    self.display.config(text="You Win! ...or do you?")
-                    # Wait a moment to let the user see they won, then start cheating
-                    self.play_audio("./text-speech/cheatwin.mp3")
-                    self.wait_for_audio()
-                    self.after(2000, self.cheat_after_user_win)
-                    return
+                # if self.current_difficulty == "hard":
+                #     self.display.config(text="You Win! ...or do you?")
+                #     # Wait a moment to let the user see they won, then start cheating
+                #     self.play_audio("./text-speech/cheatwin.mp3")
+                #     self.wait_for_audio()
+                #     self.after(2000, self.cheat_after_user_win)
+                #     return
                 self.win_count += 1
                 self.round_scores['player'] += 1
                 self.update_score_display()  # Update score display
                 self.display.config(text="You Win!")
-                self.play_audio("./text-speech/win.mp3")
-                self.wait_for_audio()
+                play_audio("./text-speech/win.mp3")
+                wait_for_audio(self)
                 if self.current_difficulty == "easy" and random.random() <= 0.5:
                     # randomly choose between the sore loser audios
                     audio = random.choice(["threat.mp3" , "bluff.mp3", "lucky.mp3"])
                     self.display.config(text=audio_files[audio])
-                    self.play_audio(f"./text-speech/{audio}")
-                    self.wait_for_audio()
+                    play_audio(f"./text-speech/{audio}")
+                    wait_for_audio(self)
                 self.after(1000, self.play_again)
             elif winner == "O":
                 self.samicount += 1
                 self.round_scores['sami'] += 1
                 self.update_score_display()  # Update score display
                 self.display.config(text=f"I Win!")
-                self.play_audio("./text-speech/samiwin.mp3")
-                self.wait_for_audio()
+                play_audio("./text-speech/samiwin.mp3")
+                wait_for_audio(self)
                 self.after(1000, self.play_again)
             elif all(btn['text'] != '' for btn in self.button_identities):
                 if self.current_difficulty == "hard":
                     self.display.config(text = "It's a Draw!.. or is it?")
                     self.round_scores['draws'] += 1
                     self.update_score_display()  # Update score display
-                    self.play_audio("./text-speech/draw.mp3")
-                    self.wait_for_audio()
+                    play_audio("./text-speech/draw.mp3")
+                    wait_for_audio(self)
                     self.after(2000, self.cheat_after_user_win)
                     return
                 self.display.config(text="It's a Draw!")
+                play_audio('./text-speech/normaldraw.mp3')
+                wait_for_audio(self)
                 self.round_scores['draws'] += 1
                 self.update_score_display()  # Update score display
                 self.after(1000, self.play_again)
@@ -580,14 +419,14 @@ class TicTacToeBoard(tk.Tk):
                 # Play "My turn" audio BEFORE SAMI's move
                 self.display.config(text=f"My Turn")
                 self.current_player = "O"
-                
+
                 # Immediately disable buttons and set flag to prevent user interaction
                 self.sami_turn_progress = True
                 self.disable_buttons()
-                
+
                 # Delay before making the robot's move
-                self.play_audio("./text-speech/myturn.mp3")
-                self.wait_for_audio()  # Let audio finish
+                play_audio("./text-speech/myturn.mp3")
+                wait_for_audio(self)  # Let audio finish
                 self.after(500, self.robot_move)  # Now robot moves
 
     def check_winner(self):
@@ -629,8 +468,8 @@ class TicTacToeBoard(tk.Tk):
         self.sami_turn_progress = False  # Reset turn flag
         self.enable_buttons()  # Ensure buttons are enabled
         self.display.config(text="Your Turn")
-        self.play_audio("./text-speech/yourturn.mp3")
-        self.wait_for_audio()
+        play_audio("./text-speech/yourturn.mp3")
+        wait_for_audio(self)
         self.game_started = True  # <-- Add this line
 
     def set_difficulty(self, new_difficulty):
@@ -695,8 +534,8 @@ class TicTacToeBoard(tk.Tk):
             fg="black"
         )
             samilost.pack(pady=(60, 20))
-            self.play_audio("./text-speech/playlost.mp3")
-            self.wait_for_audio()
+            play_audio("./text-speech/playlost.mp3")
+            wait_for_audio(self)
         elif self.samicount > self.win_count:
             samiwon = tk.Label(
             master=score_frame,
@@ -706,31 +545,38 @@ class TicTacToeBoard(tk.Tk):
             fg="black"
         )
             samiwon.pack(pady=(60, 20))
-            self.play_audio("./text-speech/yougot.mp3")
-            self.wait_for_audio()
+            play_audio("./text-speech/yougot.mp3")
+            wait_for_audio(self)
 
 
 
     def play_again(self):
         # Automatically continue to next game without message box
         # increment index first
-        if (self.difficulty_seq_index  + 1)% self.games_per_round == 0 and self.difficulty_seq_index != 0:
-                # Round is complete, show round summary
+        # Increment index first
+
+    # If all games are done, show final results
+        if self.difficulty_seq_index >= len(self.difficulty_sequence):
+            self.show_score()
+            return
+
+    # Show round summary after every 5 games
+        if (self.difficulty_seq_index + 1) % self.games_per_round == 0:
+            self.advance_difficulty_sequence()
             self.show_round_summary()
         else:
-                # Continue to next game in same round
             self.advance_difficulty_sequence()
             self.restart_game()
 
     def show_round_summary(self):
-        if self.round_scores['player'] > self.round_scores['sami']:
-            self.playerWon += 1
-        elif self.round_scores['player'] < self.round_scores['sami']:
-            self.samiWon += 1
-        
         for widget in self.winfo_children():
             widget.destroy()
         if self.current_round < self.max_round:
+            # Only update round winners if we're not at the final round
+            if self.round_scores['player'] > self.round_scores['sami']:
+                self.playerWon += 1
+            elif self.round_scores['player'] < self.round_scores['sami']:
+                self.samiWon += 1
 
             summary_frame = tk.Frame(self, bg=self.bg_color)
             summary_frame.pack(expand=True, fill=tk.BOTH, padx=50, pady=50)
@@ -765,6 +611,12 @@ class TicTacToeBoard(tk.Tk):
             )
             continue_button.pack(pady=30)
         else:
+            # Update round winners for the final round
+            if self.round_scores['player'] > self.round_scores['sami']:
+                self.playerWon += 1
+            elif self.round_scores['player'] < self.round_scores['sami']:
+                self.samiWon += 1
+                
             winner_text = ""
             if self.playerWon > self.samiWon:
                 winner_text = "You are the champion!"
@@ -785,11 +637,12 @@ class TicTacToeBoard(tk.Tk):
                 fg =winner_color
             )
             final_label.pack(pady=30)
+            # SAMI says goodbye
+            # self.robot.close_connection()  # Commented out since robot is not initialized
 
     def _start_next_round(self):
         self.current_round += 1
         self.round_scores = {'player': 0, 'sami': 0, 'draws': 0}
-        self.advance_difficulty_sequence()
         self._create_widgets()
         self.update_score_display() 
         self.restart_game() # Update round indicator

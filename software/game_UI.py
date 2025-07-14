@@ -654,6 +654,6 @@ class TicTacToeBoard(tk.Tk):
 if __name__ == "__main__":
     # To show menu: game = TicTacToeBoard()
     # To skip menu and start on easy: game = TicTacToeBoard(show_menu=False, default_difficulty="easy")
-    game = TicTacToeBoard(show_menu = False, default_difficulty="easy")
+    game = TicTacToeBoard(show_menu = True, default_difficulty="easy")
     game.mainloop()
     # close connection here with the SAMIControl function
