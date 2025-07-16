@@ -1,5 +1,12 @@
 
+# cheating ideas
+# sami distracts player
+# move comes out of nowhere
+# replace win with samis moves - "dont mind if i do.."
+
+
 import time
+from computer_audio import play_audio, wait_for_audio
 
 class CheatingAnimator:
     def __init__(self, game_instance):
@@ -9,11 +16,11 @@ class CheatingAnimator:
         self.game.animation_in_progress = True
         self.game.animation_steps = 0
         self.game.display.config(text="Hmm... Hold on a second...")
-        self.game.play_audio("./text-speech/thinkcheat.mp3")
-        self.game.wait_for_audio()
+        play_audio("./text-speech/thinkcheat.mp3")
+        wait_for_audio(self.game)
 
-        self.game.play_audio("./text-speech/evillaugh.mp3")
-        self.game.wait_for_audio()
+        play_audio("./text-speech/evillaugh.mp3")
+        wait_for_audio(self.game)
 
         current_board = [btn['text'] for btn in self.game.button_identities]
         self.movement_map = {}
@@ -88,11 +95,24 @@ class CheatingAnimator:
                 fg=self.game.player_colors.get(target_board[i], "black")
             )
         self.game.buttons_pressed = [i for i, val in enumerate(target_board) if val != ""]
+
+        wins = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],
+        [0, 4, 8], [2, 4, 6]
+        ]
+        for a, b, c in wins:
+            if target_board[a] == target_board[b] == target_board[c] == "O":
+                self.game.highlight_win(a, b, c)
+                break
+        self.game.samicount += 1
+        self.game.round_scores['sami'] += 1
+        self.game.update_score_display()
         self.game.display.config(text="I Win! (Fair and square...)")
-        self.game.play_audio("./text-speech/fairandsquare.mp3")
-        self.game.wait_for_audio()
-        self.game.play_audio("./text-speech/evillaugh.mp3")
-        self.game.wait_for_audio()
+        play_audio("./text-speech/fairandsquare.mp3")
+        wait_for_audio(self.game)
+        play_audio("./text-speech/evillaugh.mp3")
+        wait_for_audio(self.game)
         self.game.animation_in_progress = False
         self.game.sami_turn_progress = False
         self.game.enable_buttons()

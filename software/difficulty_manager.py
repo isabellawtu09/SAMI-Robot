@@ -135,11 +135,11 @@ class Fair(BaseMode):
         for move in available:
             board_copy = board.copy()
             board_copy[move] = 'O'
-            score = self.minimax(board_copy, 0, False, difficulty_modifier=0.7)
+            score = self.minimax(board_copy, 0, False, difficulty_modifier=0.8)
             if score > best_score:
                 best_score = score
                 best_move = move
-        if random.random() < 0.2:
+        if random.random() < 0.15:
             return random.choice(available)
         else:
             return best_move
