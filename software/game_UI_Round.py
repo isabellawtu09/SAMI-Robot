@@ -446,15 +446,11 @@ class TicTacToeBoard(tk.Tk):
         return None
 
     def disable_buttons(self):
-        """Disable all game buttons to prevent user interaction during SAMI's turn"""
-        # Don't change button state to avoid visual changes
-        # The sami_turn_progress flag will handle the blocking
+        
         pass
     
     def enable_buttons(self):
-        """Enable all game buttons for user interaction"""
-        # Don't change button state to avoid visual changes
-        # The sami_turn_progress flag will handle the enabling
+        
         pass
 
     def restart_game(self):
